@@ -6,7 +6,7 @@ defmodule PycTest do
     assert Pyc.Test.put_bar(%Pyc.Test{}, :pi, 3.14159265) == %Pyc.Test{
              foo: 42,
              bar: %{pi: 3.14159265},
-             baz: []
+             baz: [42]
            }
 
     assert_raise FunctionClauseError, fn ->
