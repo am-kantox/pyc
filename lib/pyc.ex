@@ -3,10 +3,19 @@ defmodule Pyc do
   Documentation for Pyc.
   """
 
-  defmacro __using__(_opts) do
+  defmacro __using__(opts) do
     quote do
-      require Pyc
       import Pyc
+
+      @constraints Keyword.get(unquote(opts), :constraints, [])
+      def constraints(), do: @constraints
+
+      defp validate(result) do
+        case __MODULE__.Validator.valid?(result) do
+          {:ok, _} -> {:ok, result}
+          :error -> {:error, result}
+        end
+      end
     end
   end
 
@@ -14,6 +23,7 @@ defmodule Pyc do
     quote do
       @init unquote(fields)
       @fields if Keyword.keyword?(@init), do: Keyword.keys(@init), else: @init
+      @after_compile ({Pyc.Helpers.Hooks, :after_pyc})
       defstruct(@init)
 
       defmacrop __this__() do
@@ -29,11 +39,12 @@ defmodule Pyc do
          ]}
       end
 
-      defmacrop __suppress_warnings__() do
+      defmacrop __suppress_warnings__(additional \\ []) do
+        all = [:this | @fields] ++ Enum.map(additional, fn {v, _, _} -> v end)
         {:=, [],
          [
-           Enum.map([:this | @fields], fn _ -> {:_, [], nil} end),
-           Enum.map([:this | @fields], &Macro.var(&1, nil))
+           Enum.map(all, fn _ -> {:_, [], nil} end),
+           Enum.map(all, &Macro.var(&1, nil))
          ]}
       end
     end
@@ -43,7 +54,22 @@ defmodule Pyc do
     quote do
       def unquote(name)(__this__() = var!(this), unquote_splicing(params)) when unquote(guards) do
         __suppress_warnings__()
-        unquote(block)
+        validate(unquote(block))
+      end
+      def unquote(name)({:ok, __this__() = var!(this)}, unquote_splicing(params)) when unquote(guards) do
+        __suppress_warnings__()
+        validate(unquote(block))
+      end
+      def unquote(name)({:error, __this__() = var!(this)} = error, unquote_splicing(params)) when unquote(guards) do
+        __suppress_warnings__(unquote(params))
+        error
+      end
+      def unquote(:"#{name}!")(__this__() = var!(this), unquote_splicing(params)) when unquote(guards) do
+        __suppress_warnings__()
+        case validate(unquote(block)) do
+          {:ok, result} -> result
+          {:error, _result} -> raise ArgumentError # , result: result
+        end
       end
     end
   end
@@ -52,7 +78,22 @@ defmodule Pyc do
     quote do
       def unquote(name)(__this__() = var!(this), unquote_splicing(params)) do
         __suppress_warnings__()
-        unquote(block)
+        validate(unquote(block))
+      end
+      def unquote(name)({:ok, __this__() = var!(this)}, unquote_splicing(params)) do
+        __suppress_warnings__()
+        validate(unquote(block))
+      end
+      def unquote(name)({:error, __this__() = var!(this)} = error, unquote_splicing(params)) do
+        __suppress_warnings__(unquote(params))
+        error
+      end
+      def unquote(:"#{name}!")(__this__() = var!(this), unquote_splicing(params)) do
+        __suppress_warnings__()
+        case validate(unquote(block)) do
+          {:ok, result} -> result
+          {:error, _result} -> raise ArgumentError # , result: result
+        end
       end
     end
   end
