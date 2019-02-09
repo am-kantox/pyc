@@ -1,7 +1,7 @@
 %{
   "bunt": {:hex, :bunt, "0.2.0", "951c6e801e8b1d2cbe58ebbd3e616a869061ddadcc4863d0a2182541acae9a38", [:mix], []},
   "credo": {:hex, :credo, "1.0.2", "88bc918f215168bf6ce7070610a6173c45c82f32baa08bdfc80bf58df2d103b6", [:mix], [{:bunt, "~> 0.2.0", [hex: :bunt, optional: false]}, {:jason, "~> 1.0", [hex: :jason, optional: false]}]},
-  "exvalibur": {:hex, :exvalibur, "0.6.2", "266700cce8e97b544d4ebf4873bd821d3a80e5073d7a5b71f0ab6e848ad0af97", [:mix], [{:flow, "~> 0.14", [hex: :flow, optional: false]}, {:gen_stage, "~> 0.14", [hex: :gen_stage, optional: false]}, {:nimble_csv, "~> 0.5", [hex: :nimble_csv, optional: false]}]},
+  "exvalibur": {:hex, :exvalibur, "0.6.3", "2a0897c504e637d2650842a45ed66c4037969c85636bceafd5e54426d82e736e", [:mix], [{:flow, "~> 0.14", [hex: :flow, optional: false]}, {:gen_stage, "~> 0.14", [hex: :gen_stage, optional: false]}, {:nimble_csv, "~> 0.5", [hex: :nimble_csv, optional: false]}]},
   "flow": {:hex, :flow, "0.14.3", "0d92991fe53035894d24aa8dec10dcfccf0ae00c4ed436ace3efa9813a646902", [:mix], [{:gen_stage, "~> 0.14.0", [hex: :gen_stage, optional: false]}]},
   "gen_stage": {:hex, :gen_stage, "0.14.1", "9d46723fda072d4f4bb31a102560013f7960f5d80ea44dcb96fd6304ed61e7a4", [:mix], []},
   "jason": {:hex, :jason, "1.1.2", "b03dedea67a99223a2eaf9f1264ce37154564de899fd3d8b9a21b1a6fd64afe7", [:mix], [{:decimal, "~> 1.0", [hex: :decimal, optional: true]}]},

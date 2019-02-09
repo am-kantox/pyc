@@ -47,4 +47,18 @@ defmodule PycTest do
       baz: '**'
     }}
   end
+
+  test "empty rules" do
+    result =
+      %Pyc.TestEmptyRules{}
+      |> Pyc.TestEmptyRules.put_bar(:pi, 3.14)
+      |> Pyc.TestEmptyRules.put_foo(50)
+      |> Pyc.TestEmptyRules.put_bar(:pi, 3.14159265)
+
+    assert result == {:ok, %Pyc.TestEmptyRules{
+      foo: 50,
+      bar: %{pi: 3.14159265},
+      baz: '***'
+    }}
+  end
 end
