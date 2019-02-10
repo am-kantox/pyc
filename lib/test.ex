@@ -1,6 +1,7 @@
 defmodule Pyc.Test do
-  use Pyc, constraints: [%{matches: %{foo: 42, bar: ~Q[bar]}, guards: %{check_bar: "is_map(bar)"}}],
- definition: [foo: 42, bar: %{}, baz: []]
+  use Pyc,
+    definition: [foo: 42, bar: %{}, baz: []],
+    constraints: [%{matches: %{foo: 42, bar: ~Q[bar]}, guards: %{check_bar: "is_map(bar)"}}]
 
   defpym :put_foo, [value] when foo < 100 and length(baz) > 0 do
     %__MODULE__{this | foo: value, baz: [42 | baz]}

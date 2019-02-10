@@ -5,7 +5,10 @@ defmodule Pyc do
   Common usage of the struct would be:
 
       use Pyc,
-        struct:
+        definition: [foo: 42, bar: %{}, baz: []],
+        constraints: [
+          %{matches: %{foo: 42, bar: ~Q[bar]},
+            guards: %{check_bar: "is_map(bar)"}}]
   """
 
   defmacro __using__(opts) do
@@ -20,22 +23,26 @@ defmodule Pyc do
       def validator(), do: @validator
 
       @definition Keyword.get(unquote(opts), :definition)
-      if is_nil(@definition), do: raise ArgumentError
+      if is_nil(@definition), do: raise(ArgumentError)
       defstruct(@definition)
 
       case @constraints do
-        [] -> defp validate(result), do: {:ok, result}
+        [] ->
+          def validate(%__MODULE__{} = result), do: {:ok, result}
+          def validate(result), do: {:error, result}
+
         _ ->
-          defp validate(result) do
+          def validate(%__MODULE__{} = result) do
             case @validator.valid?(result) do
               {:ok, _} -> {:ok, result}
               :error -> {:error, result}
             end
           end
+          def validate(result), do: {:error, result}
       end
 
       @fields if Keyword.keyword?(@definition), do: Keyword.keys(@definition), else: @definition
-      @after_compile ({Pyc.Helpers.Hooks, :after_pyc})
+      @after_compile {Pyc.Helpers.Hooks, :after_pyc}
 
       defmacrop __this__() do
         {:%, [],
@@ -53,11 +60,16 @@ defmodule Pyc do
       defmacrop __suppress_warnings__(additional \\ []) do
         all =
           Enum.reduce(additional, [:this | @fields], fn
-            {v, _, nil}, acc -> [v | acc]
-            {v, _, [_|_] = vars}, acc ->
-              (for {v, _, nil} <- vars, do: v) ++ acc
-            _, acc -> acc
+            {v, _, nil}, acc ->
+              [v | acc]
+
+            {v, _, [_ | _] = vars}, acc ->
+              for({v, _, nil} <- vars, do: v) ++ acc
+
+            _, acc ->
+              acc
           end)
+
         {:=, [],
          [
            Enum.map(all, fn _ -> {:_, [], nil} end),
@@ -70,15 +82,19 @@ defmodule Pyc do
         |> Map.put(name, value)
         |> validate()
       end
+
       def put({:ok, %__MODULE__{} = this}, name, value) when name in @fields,
         do: put(this, name, value)
+
       if length(@constraints) > 0 do
         def put({:error, %__MODULE__{} = this}, name, _value) when name in @fields, do: this
       end
+
       def put!(%__MODULE__{} = this, name, value) when name in @fields do
         case put(this, name, value) do
           {:ok, result} -> result
-          {:error, _result} -> raise ArgumentError # , result: result
+          # , result: result
+          {:error, _result} -> raise ArgumentError
         end
       end
     end
@@ -90,45 +106,58 @@ defmodule Pyc do
         __suppress_warnings__()
         validate(unquote(block))
       end
-      def unquote(name)({:ok, __this__() = var!(this)}, unquote_splicing(params)) when unquote(guards) do
+
+      def unquote(name)({:ok, __this__() = var!(this)}, unquote_splicing(params))
+          when unquote(guards) do
         __suppress_warnings__()
         validate(unquote(block))
       end
-      def unquote(name)({:error, __this__() = var!(this)} = error, unquote_splicing(params)) when unquote(guards) do
+
+      def unquote(name)({:error, __this__() = var!(this)} = error, unquote_splicing(params))
+          when unquote(guards) do
         __suppress_warnings__(unquote(params))
         error
       end
-      def unquote(:"#{name}!")(__this__() = var!(this), unquote_splicing(params)) when unquote(guards) do
+
+      def unquote(:"#{name}!")(__this__() = var!(this), unquote_splicing(params))
+          when unquote(guards) do
         __suppress_warnings__()
+
         case validate(unquote(block)) do
           {:ok, result} -> result
-          {:error, _result} -> raise ArgumentError # , result: result
+          # , result: result
+          {:error, _result} -> raise ArgumentError
         end
       end
     end
   end
 
   defmacro defpym(name, params, do: block) do
-      # if length(Module.get_attribute(__CALLER__.module, :constraints)) > 0 do
+    # if length(Module.get_attribute(__CALLER__.module, :constraints)) > 0 do
 
     quote do
       def unquote(name)(__this__() = var!(this), unquote_splicing(params)) do
         __suppress_warnings__()
         validate(unquote(block))
       end
+
       def unquote(name)({:ok, __this__() = var!(this)}, unquote_splicing(params)) do
         __suppress_warnings__()
         validate(unquote(block))
       end
+
       def unquote(name)({:error, __this__() = var!(this)} = error, unquote_splicing(params)) do
         __suppress_warnings__(unquote(params))
         error
       end
+
       def unquote(:"#{name}!")(__this__() = var!(this), unquote_splicing(params)) do
         __suppress_warnings__()
+
         case validate(unquote(block)) do
           {:ok, result} -> result
-          {:error, _result} -> raise ArgumentError # , result: result
+          # , result: result
+          {:error, _result} -> raise ArgumentError
         end
       end
     end
