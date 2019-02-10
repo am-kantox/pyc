@@ -40,12 +40,36 @@ defmodule Pyc do
       end
 
       defmacrop __suppress_warnings__(additional \\ []) do
-        all = [:this | @fields] ++ Enum.map(additional, fn {v, _, _} -> v end)
+        all =
+          Enum.reduce(additional, [:this | @fields], fn
+            {v, _, nil}, acc -> [v | acc]
+            {v, _, [_|_] = vars}, acc ->
+              (for {v, _, nil} <- vars, do: v) ++ acc
+            _, acc -> acc
+          end)
         {:=, [],
          [
            Enum.map(all, fn _ -> {:_, [], nil} end),
            Enum.map(all, &Macro.var(&1, nil))
          ]}
+      end
+
+      def put(%__MODULE__{} = this, name, value) when name in @fields do
+        this
+        |> Map.put(name, value)
+        |> validate()
+      end
+      def put({:ok, %__MODULE__{} = this}, name, value) when name in @fields do
+        put(this, name, value)
+      end
+      def put({:error, %__MODULE__{} = this}, name, _value) when name in @fields do
+        this
+      end
+      def put!(%__MODULE__{} = this, name, value) when name in @fields do
+        case put(this, name, value) do
+          {:ok, result} -> result
+          {:error, _result} -> raise ArgumentError # , result: result
+        end
       end
     end
   end

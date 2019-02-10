@@ -61,4 +61,14 @@ defmodule PycTest do
       baz: '***'
     }}
   end
+
+  test "matches in clauses" do
+    assert Pyc.Test.put_baz(%Pyc.Test{}, "foobar") ==
+      {:ok, %Pyc.Test{foo: 42, bar: %{}, baz: "foobar"}}
+  end
+
+  test "put/2 works" do
+    assert Pyc.Test.put(%Pyc.Test{}, :baz, "foobar") ==
+      {:ok, %Pyc.Test{foo: 42, bar: %{}, baz: "foobar"}}
+  end
 end
