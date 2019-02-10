@@ -1,30 +1,41 @@
 defmodule Pyc do
   @moduledoc """
-  Documentation for Pyc.
+  Enchanced struct with validation.
+
+  Common usage of the struct would be:
+
+      use Pyc,
+        struct:
   """
 
   defmacro __using__(opts) do
     quote do
+      import Exvalibur.Sigils
       import Pyc
 
       @constraints Keyword.get(unquote(opts), :constraints, [])
       def constraints(), do: @constraints
 
-      defp validate(result) do
-        case __MODULE__.Validator.valid?(result) do
-          {:ok, _} -> {:ok, result}
-          :error -> {:error, result}
-        end
-      end
-    end
-  end
+      @validator Keyword.get(unquote(opts), :validator, __MODULE__.Validator)
+      def validator(), do: @validator
 
-  defmacro defpyc(fields) do
-    quote do
-      @init unquote(fields)
-      @fields if Keyword.keyword?(@init), do: Keyword.keys(@init), else: @init
+      @definition Keyword.get(unquote(opts), :definition)
+      if is_nil(@definition), do: raise ArgumentError
+      defstruct(@definition)
+
+      case @constraints do
+        [] -> defp validate(result), do: {:ok, result}
+        _ ->
+          defp validate(result) do
+            case @validator.valid?(result) do
+              {:ok, _} -> {:ok, result}
+              :error -> {:error, result}
+            end
+          end
+      end
+
+      @fields if Keyword.keyword?(@definition), do: Keyword.keys(@definition), else: @definition
       @after_compile ({Pyc.Helpers.Hooks, :after_pyc})
-      defstruct(@init)
 
       defmacrop __this__() do
         {:%, [],
@@ -59,11 +70,10 @@ defmodule Pyc do
         |> Map.put(name, value)
         |> validate()
       end
-      def put({:ok, %__MODULE__{} = this}, name, value) when name in @fields do
-        put(this, name, value)
-      end
-      def put({:error, %__MODULE__{} = this}, name, _value) when name in @fields do
-        this
+      def put({:ok, %__MODULE__{} = this}, name, value) when name in @fields,
+        do: put(this, name, value)
+      if length(@constraints) > 0 do
+        def put({:error, %__MODULE__{} = this}, name, _value) when name in @fields, do: this
       end
       def put!(%__MODULE__{} = this, name, value) when name in @fields do
         case put(this, name, value) do
@@ -99,6 +109,8 @@ defmodule Pyc do
   end
 
   defmacro defpym(name, params, do: block) do
+      # if length(Module.get_attribute(__CALLER__.module, :constraints)) > 0 do
+
     quote do
       def unquote(name)(__this__() = var!(this), unquote_splicing(params)) do
         __suppress_warnings__()

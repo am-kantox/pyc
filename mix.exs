@@ -21,7 +21,8 @@ defmodule Pyc.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:exvalibur, "~> 0.6"},
+      # {:exvalibur, "~> 0.6"},
+      {:exvalibur, path: "../exvalibur"},
 
       {:credo, "~> 1.0", only: :dev, runtime: :false}
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
