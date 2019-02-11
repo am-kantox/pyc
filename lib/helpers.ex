@@ -1,9 +1,27 @@
 defmodule Pyc.Helpers do
   defmodule Hooks do
-    @spec after_pyc(atom() | %{module: atom() | %{rules: [any()]}}, any()) ::
-            {:module, atom(), binary(), any()}
     def after_pyc(env, _bytecode) do
-      Exvalibur.validator!(env.module.constraints(), module_name: Module.concat(env.module, "Validator"))
+      case env.module.constraints() do
+        [] ->
+          :ok
+
+        constraints ->
+          Exvalibur.validator!(constraints, module_name: env.module.validator())
+      end
+
+      defimpl Collectable, for: env.module do
+        @doc false
+        @target env.module
+        def into(original) do
+          {original,
+           fn
+             map, {:cont, {k, v}} -> @target.put(map, k, v)
+             {:ok, map}, :done -> map
+             {:error, map}, :done -> {:error, map}
+             _, :halt -> :ok
+           end}
+        end
+      end
     end
   end
 end
