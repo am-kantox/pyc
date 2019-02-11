@@ -38,7 +38,7 @@ defmodule Pyc.MixProject do
     [
       {:exvalibur, "~> 0.6"},
       {:credo, "~> 1.0", only: :dev, runtime: false},
-      {:dialyxir, "~> 0.5", only: [:dev], runtime: false},
+      {:dialyxir, "~> 0.5", only: :dev, runtime: false},
       {:stream_data, "~> 0.4", only: :test},
       {:ex_doc, "~> 0.11", only: :dev}
     ]
