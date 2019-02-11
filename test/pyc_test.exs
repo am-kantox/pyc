@@ -3,19 +3,18 @@ defmodule Pyc.Test.Test do
   doctest Pyc
 
   test "defmethod/3" do
+    assert Pyc.Test.put_bar(%Pyc.Test{}, :pi, 3.14159265) ==
+             %Pyc.Test{
+               foo: 42,
+               bar: %{pi: 3.14159265},
+               baz: [42]
+             }
+
     assert Pyc.Test.put_bar!(%Pyc.Test{}, :pi, 3.14159265) == %Pyc.Test{
              foo: 42,
              bar: %{pi: 3.14159265},
              baz: [42]
            }
-
-    assert Pyc.Test.put_bar(%Pyc.Test{}, :pi, 3.14159265) ==
-             {:ok,
-              %Pyc.Test{
-                foo: 42,
-                bar: %{pi: 3.14159265},
-                baz: [42]
-              }}
 
     assert_raise FunctionClauseError, fn ->
       Pyc.Test.put_foo(%Pyc.Test{}, 3.14159265)
@@ -30,12 +29,11 @@ defmodule Pyc.Test.Test do
       |> Pyc.Test.put_bar(:pi, 3.14159265)
 
     assert result ==
-             {:ok,
-              %Pyc.Test{
-                foo: 42,
-                bar: %{pi: 3.14159265},
-                baz: '***'
-              }}
+             %Pyc.Test{
+               foo: 42,
+               bar: %{pi: 3.14159265},
+               baz: '***'
+             }
   end
 
   test "errored chaining" do
@@ -62,21 +60,20 @@ defmodule Pyc.Test.Test do
       |> Pyc.TestEmptyRules.put_bar(:pi, 3.14159265)
 
     assert result ==
-             {:ok,
-              %Pyc.TestEmptyRules{
-                foo: 50,
-                bar: %{pi: 3.14159265},
-                baz: '***'
-              }}
+             %Pyc.TestEmptyRules{
+               foo: 50,
+               bar: %{pi: 3.14159265},
+               baz: '***'
+             }
   end
 
   test "matches in clauses" do
     assert Pyc.Test.put_baz(%Pyc.Test{}, "foobar") ==
-             {:ok, %Pyc.Test{foo: 42, bar: %{}, baz: "foobar"}}
+             %Pyc.Test{foo: 42, bar: %{}, baz: "foobar"}
   end
 
   test "put/2 works" do
     assert Pyc.Test.put(%Pyc.Test{}, :baz, "foobar") ==
-             {:ok, %Pyc.Test{foo: 42, bar: %{}, baz: "foobar"}}
+             %Pyc.Test{foo: 42, bar: %{}, baz: "foobar"}
   end
 end

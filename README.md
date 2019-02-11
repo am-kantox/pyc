@@ -35,8 +35,8 @@ iex> %MyStruct{}
 ...> |> IO.inspect(label: "2nd put")
 ...> |> MyStruct.put(:bar, 42)
 ...> |> IO.inspect(label: "3rd put")
-#⇒ 1st put: {:ok, %MyStruct{bar: %{}, baz: 42, foo: 42}}
-#  2nd put: {:ok, %MyStruct{bar: %{}, baz: [], foo: 42}}
+#⇒ 1st put: %MyStruct{bar: %{}, baz: 42, foo: 42}
+#  2nd put: %MyStruct{bar: %{}, baz: [], foo: 42}
 #  3rd put: {:error, %MyStruct{bar: 42, baz: [], foo: 42}}
 
 iex> Enum.into([bar: %{zzz: nil}, baz: "¡Hola!"], %MyStruct)
