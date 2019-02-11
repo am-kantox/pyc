@@ -1,4 +1,5 @@
 defmodule Pyc.Test do
+  @moduledoc false
   use Pyc,
     definition: [foo: 42, bar: %{}, baz: []],
     constraints: [%{matches: %{foo: 42, bar: ~Q[bar]}, guards: %{check_bar: "is_map(bar)"}}]
@@ -17,6 +18,7 @@ defmodule Pyc.Test do
 end
 
 defmodule Pyc.TestEmptyRules do
+  @moduledoc false
   use Pyc, definition: [foo: 42, bar: %{}, baz: []]
 
   defmethod :put_bar, [key, value] do

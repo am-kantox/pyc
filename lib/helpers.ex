@@ -1,5 +1,7 @@
 defmodule Pyc.Helpers do
+  @moduledoc false
   defmodule Hooks do
+    @moduledoc false
     def after_pyc(env, _bytecode) do
       case env.module.constraints() do
         [] ->
