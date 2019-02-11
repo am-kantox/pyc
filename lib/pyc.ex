@@ -9,8 +9,40 @@ defmodule Pyc do
         constraints: [
           %{matches: %{foo: 42, bar: ~Q[bar]},
             guards: %{check_bar: "is_map(bar)"}}]
+
+  `use Pyc` keyword argument accepts two keys at the moment:
+
+  - `definition:` the struct definition that will be passed as is to underlying `defstruct`
+  - `constrainst:` the list of constrainst the struct to be validated against on updates.
+
+  _Please note:_ there is no way to guarantee the validation of fields in struct in general.
+  Direct assignment `%MyStruct{my | foo: :bar}` and `Map.put(%MyStruct{}, :foo, :bar)`
+  will still update the struct without validation.
+
+  ---
+
+  The above declares the struct alongside several helper functions. The resulting
+  struct exports:
+
+  - `put/3` the sibling of `Map.put/3` but with validation against
+    the constraints given to `use/1`,
+  - `put!/3` the same as above but returns the value on its own _or raises_,
+  - `validate/1` the low-level validation of the struct constraints
+
+  Also the helper DSL function `defmethod/3` is injected into the struct module.
+  It expects the struct instance as the first argument and allows the easy handling
+  of complicated structs, exposing the struct itself as `this` local variable to
+  the block _and_ all the struct members as local variables with their names.
+
+  The block must in turn return the instance of the struct, which will be validated
+  against constraints. The result of the call to the function would always be either
+  `{:ok, struct}` or `{:error, struct}`, depending on validation.
+
+  _Sidenote:_ to validate the struct members we use [`Exvalibur`](https://hexdocs.pm/exvalibur).
+  For the syntax of constraints plese refer to its documentation.
   """
 
+  @doc false
   defmacro __using__(opts) do
     quote do
       import Exvalibur.Sigils
@@ -38,6 +70,7 @@ defmodule Pyc do
               :error -> {:error, result}
             end
           end
+
           def validate(result), do: {:error, result}
       end
 
@@ -77,21 +110,42 @@ defmodule Pyc do
          ]}
       end
 
+      @doc ~s"""
+      Updates #{__MODULE__} struct by assigning the `value` given
+      to the key `name`, _applying_ validation.
+
+      Returns {:ok, %#{__MODULE__}{}} or {:error, %#{__MODULE__}{}}, depending
+      whether the validation succeeded.
+      """
       def put(%__MODULE__{} = this, name, value) when name in @fields do
         this
         |> Map.put(name, value)
         |> validate()
       end
 
+      @doc ~s"""
+      The same as [`#{__MODULE__}.put/3`], but accepts the first argument in the
+      form `{:ok, %#{__MODULE__}{}}`. Used in monadic chaining.
+      """
       def put({:ok, %__MODULE__{} = this}, name, value) when name in @fields,
         do: put(this, name, value)
 
       if length(@constraints) > 0 do
-        def put({:error, %__MODULE__{} = this}, name, _value) when name in @fields, do: this
+        @doc ~s"""
+        Monadic tail-on-fail [`#{__MODULE__}.put/3`]; accepts the first argument
+        in the form `{:error, %#{__MODULE__}{}}` **and skips the assignement.
+        Used in monadic chaining.
+        """
+        def put({:error, %__MODULE__{} = this}, name, _value) when name in @fields,
+          do: {:error, this}
       end
 
-      def put!(%__MODULE__{} = this, name, value) when name in @fields do
-        case put(this, name, value) do
+      @doc ~s"""
+      The same as [`#{__MODULE__}.put/3`], but returns the raw result _or_ raises
+      if there was a validation error.
+      """
+      def put!(this_or_tuple, name, value) when name in @fields do
+        case put(this_or_tuple, name, value) do
           {:ok, result} -> result
           # , result: result
           {:error, _result} -> raise ArgumentError
@@ -100,7 +154,34 @@ defmodule Pyc do
     end
   end
 
-  defmacro defpym(name, {:when, _, [params, guards]}, do: block) do
+  @doc ~S"""
+  Declares a function somewhat similar to 🐍 class method.
+
+  In the block `this` variable local is available as well as all the fields are
+  being mapped to local variables.
+
+  The produced function expects the struct as the first argument, all the arguments
+  specified in the call to this macro will be passed unsplatted starting with the
+  second one.
+
+  Under the hood the following definition
+
+      use Pyc,
+        definition: [:amount],
+        constraints: [
+          %{matches: %{amount: ~Q[amount]},
+            guards: %{amount_is_float: "is_float(amount)"}}]
+
+      defmethod :round_amount, [decimals],
+        do: %MyStruct{this | amount: Float.round(amount, decimals)}
+
+  will be expanded to the method accepting two parameters (`%MyStruct{}` and `decimals`.)
+
+  In the block there are variables `this` and `amount` magically available. Also,
+  after the block has the value returned, `validation` implied by constraints will
+  be applied (in this example we’d check for `amount` value to be `float`.)
+  """
+  defmacro defmethod(name, {:when, _, [params, guards]}, do: block) do
     quote do
       def unquote(name)(__this__() = var!(this), unquote_splicing(params)) when unquote(guards) do
         __suppress_warnings__()
@@ -132,7 +213,7 @@ defmodule Pyc do
     end
   end
 
-  defmacro defpym(name, params, do: block) do
+  defmacro defmethod(name, params, do: block) do
     # if length(Module.get_attribute(__CALLER__.module, :constraints)) > 0 do
 
     quote do
