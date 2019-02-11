@@ -1,4 +1,4 @@
-defmodule PycTest do
+defmodule Pyc.Test.Test do
   use ExUnit.Case
   doctest Pyc
 

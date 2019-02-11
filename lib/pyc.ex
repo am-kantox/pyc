@@ -58,6 +58,11 @@ defmodule Pyc do
       if is_nil(@definition), do: raise(ArgumentError)
       defstruct(@definition)
 
+      @doc ~s"""
+      Validates the `%#{__MODULE__}{}` instance against the set of constraints
+      specified in the keyword argument passed to `use Pyc`.
+      """
+      @spec validate(result :: %__MODULE__{}) :: {:ok, %__MODULE__{}} | {:error, any()}
       case @constraints do
         [] ->
           def validate(%__MODULE__{} = result), do: {:ok, result}
@@ -109,6 +114,13 @@ defmodule Pyc do
            Enum.map(all, &Macro.var(&1, nil))
          ]}
       end
+
+      @spec put(
+              this :: %__MODULE__{} | {:ok, %__MODULE__{}} | {:error, any()},
+              name :: atom(),
+              value :: any()
+            ) ::
+              {:ok, %__MODULE__{}} | {:error, any()}
 
       @doc ~s"""
       Updates #{__MODULE__} struct by assigning the `value` given
@@ -214,8 +226,6 @@ defmodule Pyc do
   end
 
   defmacro defmethod(name, params, do: block) do
-    # if length(Module.get_attribute(__CALLER__.module, :constraints)) > 0 do
-
     quote do
       def unquote(name)(__this__() = var!(this), unquote_splicing(params)) do
         __suppress_warnings__()
