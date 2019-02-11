@@ -1,6 +1,6 @@
 # Pyc
 
-**Struct on steroids: insertion validation, handy pipelining and more.**
+[![CircleCI](https://circleci.com/gh/am-kantox/pyc.svg?style=svg)](https://circleci.com/gh/am-kantox/pyc)  **Struct on steroids: insertion validation, handy pipelining and more.**
 
 ## Usage
 
