@@ -16,8 +16,8 @@ defmodule Pyc.Helpers do
           {original,
            fn
              map, {:cont, {k, v}} -> @target.put(map, k, v)
-             {:ok, map}, :done -> map
              {:error, map}, :done -> {:error, map}
+             map, :done -> map
              _, :halt -> :ok
            end}
         end

@@ -36,7 +36,7 @@ defmodule Pyc do
 
   The block must in turn return the instance of the struct, which will be validated
   against constraints. The result of the call to the function would always be either
-  `{:ok, struct}` or `{:error, struct}`, depending on validation.
+  `struct` or `{:error, struct}`, depending on validation.
 
   _Sidenote:_ to validate the struct members we use [`Exvalibur`](https://hexdocs.pm/exvalibur).
   For the syntax of constraints plese refer to its documentation.
@@ -62,16 +62,16 @@ defmodule Pyc do
       Validates the `%#{__MODULE__}{}` instance against the set of constraints
       specified in the keyword argument passed to `use Pyc`.
       """
-      @spec validate(result :: %__MODULE__{}) :: {:ok, %__MODULE__{}} | {:error, any()}
+      @spec validate(result :: %__MODULE__{}) :: %__MODULE__{} | {:error, any()}
       case @constraints do
         [] ->
-          def validate(%__MODULE__{} = result), do: {:ok, result}
+          def validate(%__MODULE__{} = result), do: result
           def validate(result), do: {:error, result}
 
         _ ->
           def validate(%__MODULE__{} = result) do
             case @validator.valid?(result) do
-              {:ok, _} -> {:ok, result}
+              {:ok, _} -> result
               :error -> {:error, result}
             end
           end
@@ -116,17 +116,17 @@ defmodule Pyc do
       end
 
       @spec put(
-              this :: %__MODULE__{} | {:ok, %__MODULE__{}} | {:error, any()},
+              this :: %__MODULE__{} | {:error, any()},
               name :: atom(),
               value :: any()
             ) ::
-              {:ok, %__MODULE__{}} | {:error, any()}
+              %__MODULE__{} | {:error, any()}
 
       @doc ~s"""
       Updates #{__MODULE__} struct by assigning the `value` given
       to the key `name`, _applying_ validation.
 
-      Returns {:ok, %#{__MODULE__}{}} or {:error, %#{__MODULE__}{}}, depending
+      Returns %#{__MODULE__}{} or {:error, %#{__MODULE__}{}}, depending
       whether the validation succeeded.
       """
       def put(%__MODULE__{} = this, name, value) when name in @fields do
@@ -134,13 +134,6 @@ defmodule Pyc do
         |> Map.put(name, value)
         |> validate()
       end
-
-      @doc ~s"""
-      The same as [`#{__MODULE__}.put/3`], but accepts the first argument in the
-      form `{:ok, %#{__MODULE__}{}}`. Used in monadic chaining.
-      """
-      def put({:ok, %__MODULE__{} = this}, name, value) when name in @fields,
-        do: put(this, name, value)
 
       if length(@constraints) > 0 do
         @doc ~s"""
@@ -158,9 +151,38 @@ defmodule Pyc do
       """
       def put!(this_or_tuple, name, value) when name in @fields do
         case put(this_or_tuple, name, value) do
-          {:ok, result} -> result
-          # , result: result
-          {:error, _result} -> raise ArgumentError
+          {:error, result} -> raise Pyc.Invalid, source: result, reason: "Validation failed"
+          result -> result
+        end
+      end
+
+      @spec get(term :: %__MODULE__{}, key :: atom(), default :: any()) ::
+              %__MODULE__{} | {:error, %__MODULE__{}}
+      def get(%__MODULE__{} = term, key, default \\ nil) when key in @fields do
+        with {:ok, value} <- fetch(term, key), nil <- value, do: default
+      end
+
+      @spec delete(term :: %__MODULE__{}, key :: atom()) ::
+              %__MODULE__{} | {:error, %__MODULE__{}}
+      def delete(%__MODULE__{} = term, key), do: put(term, key, nil)
+
+      @behaviour Access
+
+      @impl Access
+      def fetch(%__MODULE__{} = term, key) when key in @fields, do: Map.fetch(term, key)
+
+      @impl Access
+      def pop(%__MODULE__{} = term, key, default \\ nil),
+        do: {get(term, key, default), delete(term, key)}
+
+      @impl Access
+      def get_and_update(%__MODULE__{} = term, key, fun) when is_function(fun, 1) do
+        current = get(term, key)
+
+        case fun.(current) do
+          {get, update} -> {get, put(term, key, update)}
+          :pop -> {current, delete(term, key)}
+          other -> raise Pyc.Invalid, source: term, reason: other
         end
       end
     end
@@ -200,12 +222,6 @@ defmodule Pyc do
         validate(unquote(block))
       end
 
-      def unquote(name)({:ok, __this__() = var!(this)}, unquote_splicing(params))
-          when unquote(guards) do
-        __suppress_warnings__()
-        validate(unquote(block))
-      end
-
       def unquote(name)({:error, __this__() = var!(this)} = error, unquote_splicing(params))
           when unquote(guards) do
         __suppress_warnings__(unquote(params))
@@ -217,9 +233,8 @@ defmodule Pyc do
         __suppress_warnings__()
 
         case validate(unquote(block)) do
-          {:ok, result} -> result
-          # , result: result
-          {:error, _result} -> raise ArgumentError
+          {:error, result} -> raise Pyc.Invalid, source: result, reason: "Validation failed"
+          result -> result
         end
       end
     end
@@ -228,11 +243,6 @@ defmodule Pyc do
   defmacro defmethod(name, params, do: block) do
     quote do
       def unquote(name)(__this__() = var!(this), unquote_splicing(params)) do
-        __suppress_warnings__()
-        validate(unquote(block))
-      end
-
-      def unquote(name)({:ok, __this__() = var!(this)}, unquote_splicing(params)) do
         __suppress_warnings__()
         validate(unquote(block))
       end
@@ -246,9 +256,8 @@ defmodule Pyc do
         __suppress_warnings__()
 
         case validate(unquote(block)) do
-          {:ok, result} -> result
-          # , result: result
-          {:error, _result} -> raise ArgumentError
+          {:error, result} -> raise Pyc.Invalid, source: result, reason: "Validation failed"
+          result -> result
         end
       end
     end
