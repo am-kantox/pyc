@@ -29,3 +29,8 @@ defmodule Pyc.TestEmptyRules do
     %__MODULE__{this | foo: value, baz: [42 | baz]}
   end
 end
+
+defmodule Pyc.TestInspect do
+  @moduledoc false
+  use Pyc, definition: [foo: 42, bar: %{key: :value}, baz: []], inspect: [:bar, :foo]
+end

@@ -16,4 +16,10 @@ defmodule Pyc.Test.ProtocolsBehaviours.Test do
     assert put_in(input, [:bar, :baz], 42) == %Pyc.Test{bar: %{baz: 42}, baz: [], foo: 42}
     assert put_in(input, [:foo], :bar) == {:error, %Pyc.Test{bar: %{}, baz: [], foo: :bar}}
   end
+
+  if Version.compare(System.version(), "1.7.999") == :gt do
+    test "inspect" do
+      assert inspect(%Pyc.TestInspect{}) == "#Pyc.TestInspect<bar: %{key: :value}, foo: 42, ...>"
+    end
+  end
 end

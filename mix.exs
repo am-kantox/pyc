@@ -3,7 +3,7 @@ defmodule Pyc.MixProject do
 
   @app :pyc
   @github "am-kantox/#{@app}"
-  @version "0.2.0"
+  @version "0.2.1"
 
   def project do
     [

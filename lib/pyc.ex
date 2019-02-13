@@ -12,8 +12,11 @@ defmodule Pyc do
 
   `use Pyc` keyword argument accepts two keys at the moment:
 
-  - `definition:` the struct definition that will be passed as is to underlying `defstruct`
-  - `constrainst:` the list of constrainst the struct to be validated against on updates.
+  - `definition:` the struct definition that will be passed as is to underlying `defstruct`,
+  - `constrainst:` the list of constrainst the struct to be validated against on updates,
+  - `inspect:` since `0.2.1` we support list of fields to derive `Inspect` algebra for;
+  works on Elixir greater or equal to 1.8.0. When omitted, all the fields given via
+  `definition` parameter are used.
 
   _Please note:_ there is no way to guarantee the validation of fields in struct in general.
   Direct assignment `%MyStruct{my | foo: :bar}` and `Map.put(%MyStruct{}, :foo, :bar)`
@@ -56,7 +59,15 @@ defmodule Pyc do
 
       @definition Keyword.get(unquote(opts), :definition)
       if is_nil(@definition), do: raise(ArgumentError)
+
+      @fields if Keyword.keyword?(@definition), do: Keyword.keys(@definition), else: @definition
+
+      @inspect Keyword.get(unquote(opts), :inspect, @fields)
+      if Version.compare(System.version(), "1.7.999") == :gt,
+        do: @derive({Inspect, only: @inspect})
+
       defstruct(@definition)
+      @after_compile {Pyc.Helpers.Hooks, :after_pyc}
 
       @doc ~s"""
       Validates the `%#{__MODULE__}{}` instance against the set of constraints
@@ -78,9 +89,6 @@ defmodule Pyc do
 
           def validate(result), do: {:error, result}
       end
-
-      @fields if Keyword.keyword?(@definition), do: Keyword.keys(@definition), else: @definition
-      @after_compile {Pyc.Helpers.Hooks, :after_pyc}
 
       defmacrop __this__() do
         {:%, [],
